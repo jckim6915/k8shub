@@ -1,0 +1,47 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+spec:
+  destination:
+    namespace: test
+    server: https://kubernetes.default.svc
+  project: monitoring
+  source:
+    helm:
+      values: |  
+        global:
+          name: consul
+          image: "hashicorp/consul:1.15.1" 
+          imageK8S: hashicorp/consul-k8s-control-plane:1.1.1   
+          datacenter: dc1
+        connectInject:
+          enabled: false
+        server:
+          enabled: "-"
+          image: null
+          replicas: 1
+          storage: 10Gi
+          storageClass: null
+          exposeService:
+            enabled: "true"
+            type: NodePort
+            nodePort:
+              http: null
+            annotations: null  
+          resources:
+            requests:
+              memory: "100Mi"
+              cpu: "100m"
+            limits:
+              memory: "100Mi"
+              cpu: "100m"  
+    path: helm/charts/consul
+    repoURL: https://github.com/jckim6915/k8shub.git
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true      

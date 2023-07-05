@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: monitoring
+  namespace: argocd
+spec:
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  description: monitoring-dev
+  destinations:
+    - namespace: test
+      server: https://kubernetes.default.svc
+  roles:
+    - description: for deploying
+      name: deploy
+      policies:
+        - p, proj:monitoring:deploy, applications, *, monitoring/*, allow
+  sourceRepos:
+     - https://github.com/jckim6915/k8shub.git
+ 
+
+      
