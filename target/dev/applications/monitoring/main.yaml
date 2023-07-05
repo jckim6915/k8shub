@@ -1,0 +1,159 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-dev
+  namespace: argocd
+spec:
+  destination:
+    namespace: test
+    server: https://kubernetes.default.svc
+  project: monitoring
+  source:
+    helm:
+      skipCrds: true
+      values: |
+        nameOverride: prom
+        fullnameOverride: prom
+        # kube-state-metrics:
+        #   image:
+        #     repository: idock.daumkakao.io/cloud/kube-state-metrics
+        # prometheus-node-exporter:
+        #   image:
+            # repository: idock.daumkakao.io/cloud/node-exporter
+        nodeExporter:
+          enabled: false
+        prometheus-node-exporter:
+          enabled: false            
+        kubeControllerManager:
+          enabled: true
+          service:
+            port: 10257
+            targetPort: 10257
+          serviceMonitor:
+            https: true
+            insecureSkipVerify: true
+        kubeScheduler:
+          enabled: true
+          service:
+            port: 10259
+            targetPort: 10259
+          serviceMonitor:
+            https: true
+            insecureSkipVerify: true
+        kubeEtcd:
+          enabled: true
+          service:
+            port: 2381
+            targetPort: 2381
+        # alertmanager:
+        #   config:
+        #     global:
+        #       resolve_timeout: 5m
+        #     route:
+        #       receiver: "kakaoworks"
+        #       group_by: ["alertname"]
+        #       group_wait: 30s
+        #       group_interval: 5m
+        #       repeat_interval: 1h
+        #       routes:
+        #         - match_re:
+        #             alertname: "Watchdog|InfoInhibitor|etcdHighNumberOfFailedGRPCRequests"
+        #           receiver: "empty"
+        #     receivers:
+        #       - name: "empty"
+        #       - name: "kakaoworks"
+        #         webhook_configs:
+        #           - url: http://alert-proxy.monitoring.svc.cluster.local:5000/alert/prometheus
+        #             send_resolved: true
+        #   ingress:
+        #     enabled: true
+        #     hosts:
+        #       - alertmanager.kr-central-1.k5d.io
+        #   alertmanagerSpec:
+        #     image:
+        #       repository: idock.daumkakao.io/cloud/alertmanager
+        #     externalUrl: http://alertmanager.kr-central-1.k5d.io
+        #     nodeSelector:
+        #       monitoring: enabled
+        # prometheusOperator:
+        #   image:
+        #     repository: idock.daumkakao.io/cloud/prometheus-operator
+        #   prometheusConfigReloader:
+        #     image:
+        #       repository: idock.daumkakao.io/cloud/prometheus-config-reloader
+        #     resources:
+        #       requests:
+        #         cpu: 1000m
+        #         memory: 1Gi
+        #       limits:
+        #         cpu: 2000m
+        #         memory: 4Gi
+        #   admissionWebhooks:
+        #     patch:
+        #       image:
+        #         repository: idock.daumkakao.io/cloud/kube-webhook-certgen
+        #       nodeSelector:
+        #         monitoring: enabled
+        #   nodeSelector:
+        #     monitoring: enabled
+        prometheus:
+          thanosService:
+            enabled: true
+          prometheusSpec:
+            externalLabels:
+              replica: main
+            remoteWriteDashboards: false
+            thanos:
+              image: quay.io/thanos/thanos:v0.28.1
+          # ingress:
+          #   enabled: true
+          #   hosts:
+          #     - prometheus.kr-central-1.k5d.io
+          # prometheusSpec:
+          #   image:
+          #     repository: idock.daumkakao.io/cloud/prometheus
+          #   externalLabels:
+          #     cloud: public
+          #     region: kr-central-1
+          #     cluster: overcloud-az-a
+          #   resources:
+          #     limits:
+          #       cpu: 12000m
+          #       memory: 200Gi
+          #     requests:
+          #       cpu: 5000m
+          #       memory: 40Gi
+          #   externalUrl: http://prometheus.kr-central-1.k5d.io
+          #   nodeSelector:
+          #     prometheus: store
+          #   containers:
+          #     - args:
+          #         - --web.console.templates=/etc/prometheus/consoles
+          #         - --web.console.libraries=/etc/prometheus/console_libraries
+          #         - --config.file=/etc/prometheus/config_out/prometheus.env.yaml
+          #         - --storage.tsdb.path=/prometheus/data
+          #         - --storage.tsdb.retention.time=30d
+          #         - --web.enable-lifecycle
+          #         - --storage.tsdb.no-lockfile
+          #         - --web.route-prefix=/
+          #         - --web.external-url=http://prometheus.kr-central-1.k5d.io
+          #       name: prometheus
+            volumes:
+              - hostPath:
+                  path: /data/prometheus
+                name: local-storage
+            volumeMounts:
+              - mountPath: /prometheus/data
+                name: local-storage
+        grafana:
+          enabled: false
+    path: helm/charts/kube-prometheus-stack
+    repoURL: https://github.com/jckim6915/k8shub.git    
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
