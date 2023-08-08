@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: monitoring
+  name: consul-dev
   namespace: argocd
 spec:
   destination:
@@ -39,6 +39,7 @@ spec:
               cpu: "100m"  
     path: helm/charts/consul
     repoURL: https://github.com/jckim6915/k8shub.git
+    targetRevision: HEAD    
   syncPolicy:
     automated:
       prune: true
